@@ -45,14 +45,14 @@ st.title("Simple File Manager")
 
 # Tabs for different file categories
 tabs = ["General", "Insurance", "Upcoming", "Job Related", "Photos"]
-selected_tab = st.tabs(tabs)
+tab_container = st.tabs(tabs)
 
-for tab in selected_tab:
+for index, tab in enumerate(tab_container):
     with tab:
-        st.header(f"{tab} Files")
+        st.header(f"{tabs[index]} Files")
 
         # File uploader
-        uploaded_file = st.file_uploader("Upload a file", type=None, key=f"upload_{tab}")
+        uploaded_file = st.file_uploader("Upload a file", type=None, key=f"upload_{tabs[index]}")
         
         if uploaded_file:
             file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.name)
@@ -78,9 +78,9 @@ for tab in selected_tab:
                 
                 with col2:
                     with open(file_path, "rb") as f:
-                        st.download_button("Download", f, file_name)
+                        st.download_button("Download", f, file_name, key=f"download_{file_name}_{tabs[index]}")
                 
                 with col3:
-                    if st.button("Delete", key=f"delete_{file_name}"):
+                    if st.button("Delete", key=f"delete_{file_name}_{tabs[index]}"):
                         delete_file(file_name)
                         st.rerun()  # Updated function call
