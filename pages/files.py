@@ -43,36 +43,44 @@ def delete_file(file_name):
 # Streamlit UI
 st.title("Simple File Manager")
 
-# File uploader
-uploaded_file = st.file_uploader("Upload a file", type=None)
+# Tabs for different file categories
+tabs = ["General", "Insurance", "Upcoming", "Job Related", "Photos"]
+selected_tab = st.tabs(tabs)
 
-if uploaded_file:
-    file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.name)
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    st.success(f"File '{uploaded_file.name}' uploaded successfully!")
-    st.rerun()  # Updated function call
+for tab in selected_tab:
+    with tab:
+        st.header(f"{tab} Files")
 
-st.subheader("Uploaded Files")
-
-# Display file list with download and delete buttons
-files = get_files()
-
-if not files:
-    st.write("No files uploaded yet.")
-else:
-    for file_name in files:
-        file_path = os.path.join(UPLOAD_FOLDER, file_name)
-        col1, col2, col3 = st.columns([4, 1, 1])
-
-        with col1:
-            st.write(file_name)
-
-        with col2:
-            with open(file_path, "rb") as f:
-                st.download_button("Download", f, file_name)
-
-        with col3:
-            if st.button("Delete", key=file_name):
-                delete_file(file_name)
-                st.rerun()  # Updated function call
+        # File uploader
+        uploaded_file = st.file_uploader("Upload a file", type=None, key=f"upload_{tab}")
+        
+        if uploaded_file:
+            file_path = os.path.join(UPLOAD_FOLDER, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+            st.rerun()  # Updated function call
+        
+        st.subheader("Uploaded Files")
+        
+        # Display file list with download and delete buttons
+        files = get_files()
+        
+        if not files:
+            st.write("No files uploaded yet.")
+        else:
+            for file_name in files:
+                file_path = os.path.join(UPLOAD_FOLDER, file_name)
+                col1, col2, col3 = st.columns([4, 1, 1])
+                
+                with col1:
+                    st.write(file_name)
+                
+                with col2:
+                    with open(file_path, "rb") as f:
+                        st.download_button("Download", f, file_name)
+                
+                with col3:
+                    if st.button("Delete", key=f"delete_{file_name}"):
+                        delete_file(file_name)
+                        st.rerun()  # Updated function call
