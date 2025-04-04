@@ -72,48 +72,77 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
-# Upload Button & Dialog
+# --- Button triggers ---
 if st.button("Upload Document"):
     st.session_state.show_upload_dialog = True
 
-if st.session_state.get("show_upload_dialog", False):
-    @st.experimental_dialog("Upload New Document")
-    def upload_dialog():
-        uploaded_file = st.file_uploader("Choose a file")
-        note_text = st.text_input("Note (optional)")
-        if st.button("Upload"):
-            if uploaded_file:
-                success, msg = upload_file_to_supabase(uploaded_file, note_text)
-                if success:
-                    st.success(msg)
-                    st.session_state.show_upload_dialog = False
-                    st.rerun()
-                else:
-                    st.error(msg)
-            else:
-                st.warning("Please select a file.")
-        if st.button("Cancel"):
-            st.session_state.show_upload_dialog = False
-            st.rerun()
+if st.button("Delete Document"):
+    st.session_state.show_delete_dialog = True
 
+# --- Upload Dialog ---
+@st.experimental_dialog("Upload New Document")
+def upload_dialog():
+    uploaded_file = st.file_uploader("Choose a file")
+    note_text = st.text_input("Note (optional)")
+    if st.button("Upload"):
+        if uploaded_file:
+            success, msg = upload_file_to_supabase(uploaded_file, note_text)
+            if success:
+                st.success(msg)
+                st.session_state.show_upload_dialog = False
+                st.rerun()
+            else:
+                st.error(msg)
+        else:
+            st.warning("Please select a file.")
+    if st.button("Cancel"):
+        st.session_state.show_upload_dialog = False
+        st.rerun()
+
+# --- Delete Dialog ---
+@st.experimental_dialog("Delete Document")
+def delete_dialog():
+    documents = fetch_documents()
+    if not documents:
+        st.warning("No documents to delete.")
+        return
+
+    doc_id_map = {
+        f"{filename} ({uploaded_at.strftime('%Y-%m-%d')})": doc_id
+        for doc_id, filename, _, uploaded_at, _, _ in documents
+    }
+
+    selected = st.selectbox("Select document to delete", list(doc_id_map.keys()))
+    if st.button("Delete"):
+        deleted = delete_document(doc_id_map[selected])
+        if deleted:
+            st.success(f"Deleted '{selected}'")
+            st.session_state.show_delete_dialog = False
+            st.rerun()
+        else:
+            st.error("Delete failed.")
+    if st.button("Cancel"):
+        st.session_state.show_delete_dialog = False
+        st.rerun()
+
+# --- Trigger dialogs ---
+if st.session_state.get("show_upload_dialog", False):
     upload_dialog()
 
-# Fetch documents
-documents = fetch_documents()
+if st.session_state.get("show_delete_dialog", False):
+    delete_dialog()
 
-# Show documents
+# --- Documents Table ---
 st.markdown("---")
 st.markdown("### 📑 Uploaded Documents")
 
+documents = fetch_documents()
 if documents:
     records = []
-    doc_id_map = {}
     for row in documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
         image_preview = binary_to_image_data(filedata, filetype)
         download_html = get_download_link(filedata, filename, filetype)
-        label = f"{filename} ({uploaded_at.strftime('%Y-%m-%d')})"
-        doc_id_map[label] = doc_id
         records.append({
             "Preview": image_preview,
             "Filename": filename,
@@ -135,26 +164,5 @@ if documents:
         use_container_width=True,
         disabled=True
     )
-
-    # Delete Button & Dialog
-    if st.button("Delete Document"):
-        st.session_state.show_delete_dialog = True
-
-    if st.session_state.get("show_delete_dialog", False):
-        @st.experimental_dialog("Delete Document")
-        def delete_dialog():
-            selected_label = st.selectbox("Select a document to delete", list(doc_id_map.keys()))
-            if st.button("Delete"):
-                deleted = delete_document(doc_id_map[selected_label])
-                if deleted:
-                    st.success(f"Deleted '{selected_label}'")
-                    st.session_state.show_delete_dialog = False
-                    st.rerun()
-                else:
-                    st.error("Delete failed.")
-            if st.button("Cancel"):
-                st.session_state.show_delete_dialog = False
-                st.rerun()
-        delete_dialog()
 else:
     st.info("No documents uploaded yet.")
