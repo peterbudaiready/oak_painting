@@ -10,6 +10,7 @@ enableXsrfProtection = false
 
 [client]
 toolbarMode = "minimal"
+initialSidebarState = "collapsed"
 
 [ui]
 # Enables wide mode
