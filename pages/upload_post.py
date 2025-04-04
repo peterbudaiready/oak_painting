@@ -18,9 +18,6 @@ header {visibility: hidden;}        /* Hide the header */
 # Apply the custom styling globally
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
-# Ensure authentication before rendering any UI
-login_popup()
-
 # Replace with your actual Make.com webhook URL
 WEBHOOK_URL = "https://hook.eu2.make.com/sg2oc9evhq2q4mhlljd9vuwgunfusakh"
 
