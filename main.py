@@ -15,34 +15,6 @@ header {visibility: hidden;}        /* Hide the header */
 # Apply the custom styling globally
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
-# Ensure authentication before rendering any UI
-login_popup()
-
-# Ensure authentication state is persistent across pages
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-def login_popup():
-    """Displays a password prompt before showing the UI globally across all pages."""
-    correct_password = "Betega50?"
-
-    if not st.session_state["authenticated"]:
-        st.title("🔒 Secure Login")
-        with st.form("login_form"):
-            password = st.text_input("Enter Password", type="password")
-            submit = st.form_submit_button("Login")
-
-            if submit:
-                if password == correct_password:
-                    st.session_state["authenticated"] = True
-                    st.rerun()
-                else:
-                    st.error("Incorrect password. Try again.")
-        st.stop()  # Stops the app from loading anything else until logged in
-
-# Call the login function before rendering the UI
-login_popup()
-
 # Display UI only if authenticated
 st.title("🔗 Quick Access Links")
 
