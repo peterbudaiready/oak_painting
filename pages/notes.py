@@ -13,6 +13,7 @@ def init_db():
     """Initialize the SQLite database with tasks and expenses tables if not exists."""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
+    # Create tasks table with expected columns.
     c.execute(f"""
         CREATE TABLE IF NOT EXISTS {TASKS_TABLE} (
             Note TEXT,
@@ -103,18 +104,41 @@ init_db()
 tasks_df = load_tasks()
 expenses_df = load_expenses()
 
-# Convert date columns in tasks (if data exists) to proper date objects.
-if not tasks_df.empty:
-    tasks_df["Date_Created"] = pd.to_datetime(tasks_df["Date_Created"], errors="coerce").dt.date
-    tasks_df["Deadline"] = pd.to_datetime(tasks_df["Deadline"], errors="coerce").dt.date
+# --- Ensure tasks_df has all expected columns ---
+expected_task_columns = {
+    "Note": "",
+    "Web": "",
+    "Done": False,
+    "Priority": "Low",
+    "Date_Created": pd.Timestamp.today().date(),
+    "Deadline": (pd.Timestamp.today().date() + datetime.timedelta(days=7)),
+    "Progress": 0
+}
+for col, default_val in expected_task_columns.items():
+    if col not in tasks_df.columns:
+        tasks_df[col] = default_val
+
+# --- Ensure expenses_df has all expected columns ---
+expected_expense_columns = {
+    "Name": "",
+    "Web": "",
+    "Date": pd.Timestamp.today().date(),
+    "Type": "one",
+    "Price": 0
+}
+for col, default_val in expected_expense_columns.items():
+    if col not in expenses_df.columns:
+        expenses_df[col] = default_val
+
+# Convert date columns in tasks to proper date objects.
+tasks_df["Date_Created"] = pd.to_datetime(tasks_df["Date_Created"], errors="coerce").dt.date
+tasks_df["Deadline"] = pd.to_datetime(tasks_df["Deadline"], errors="coerce").dt.date
 
 # Convert the date column in expenses to proper date objects.
-if not expenses_df.empty:
-    expenses_df["Date"] = pd.to_datetime(expenses_df["Date"], errors="coerce").dt.date
+expenses_df["Date"] = pd.to_datetime(expenses_df["Date"], errors="coerce").dt.date
 
 # --- Tasks Section ---
-
-# If no tasks exist, initialize with one row having default values.
+# If tasks_df is empty, initialize with one row having default values.
 if tasks_df.empty:
     today_date = pd.Timestamp.today().date()
     default_deadline = today_date + datetime.timedelta(days=7)
@@ -170,10 +194,9 @@ if st.button("Save Task Changes"):
 st.markdown("---")
 
 # --- Expenses Section ---
-
 st.header("Expenses")
 
-# If no expenses exist, initialize with one blank row.
+# If expenses_df is empty, initialize with one blank row.
 if expenses_df.empty:
     expenses_df = pd.DataFrame({
         "Name": [""],
@@ -208,7 +231,6 @@ if st.button("Save Expenses Changes"):
 st.markdown("---")
 
 # --- Expenses Chart (Last 30 Days) ---
-
 st.header("Expenses Over Last 30 Days")
 
 # Convert the "Date" column in edited_expenses_df to datetime for filtering.
