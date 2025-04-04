@@ -79,23 +79,27 @@ def save_expenses(df):
     conn.commit()
     conn.close()
 
-def compute_progress(row):
+def compute_progress(row, current_date):
     """
-    Compute progress as a percentage based on Date_Created and Deadline.
-    It represents the fraction of time elapsed between the two dates.
+    Compute progress as a percentage based on Date_Created, Deadline and Current Date.
+    - If current_date <= Date_Created: returns 0%
+    - If current_date >= Deadline: returns 100%
+    - Otherwise, returns the percentage of time elapsed between Date_Created and Deadline.
     """
     try:
         date_created = pd.to_datetime(row["Date_Created"])
         deadline = pd.to_datetime(row["Deadline"])
-        today = pd.Timestamp.today().normalize()
+        current_date = pd.to_datetime(current_date)
         if pd.isnull(date_created) or pd.isnull(deadline):
             return 0
-        # Avoid division by zero or negative intervals.
-        if deadline <= date_created:
-            return 100 if today >= deadline else 0
-        progress = ((today - date_created) / (deadline - date_created)) * 100
-        progress = max(0, min(100, progress))
-        return round(progress)
+        if current_date <= date_created:
+            return 0
+        elif current_date >= deadline:
+            return 100
+        else:
+            progress = ((current_date - date_created) / (deadline - date_created)) * 100
+            progress = max(0, min(100, progress))
+            return round(progress)
     except Exception:
         return 0
 
@@ -138,6 +142,9 @@ tasks_df["Deadline"] = pd.to_datetime(tasks_df["Deadline"], errors="coerce").dt.
 expenses_df["Date"] = pd.to_datetime(expenses_df["Date"], errors="coerce").dt.date
 
 # --- Tasks Section ---
+# Allow setting a current date for progress calculation (default to today).
+current_date = st.date_input("Set Current Date for Progress Calculation", value=pd.Timestamp.today().date())
+
 # If tasks_df is empty, initialize with one row having default values.
 if tasks_df.empty:
     today_date = pd.Timestamp.today().date()
@@ -152,8 +159,8 @@ if tasks_df.empty:
         "Progress": [0]
     })
 
-# Compute progress for each task.
-tasks_df["Progress"] = tasks_df.apply(compute_progress, axis=1)
+# Recompute progress for each task using the provided current_date.
+tasks_df["Progress"] = tasks_df.apply(lambda row: compute_progress(row, current_date), axis=1)
 
 # Title for the tasks section.
 st.title("Task Manager")
@@ -168,7 +175,7 @@ tasks_column_config = {
     "Deadline": st.column_config.DateColumn("Deadline", help="Task deadline"),
     "Progress": st.column_config.ProgressColumn(
         "Progress",
-        help="Progress from creation to deadline",
+        help="Progress from creation to deadline based on current date",
         min_value=0,
         max_value=100,
         format="plain"
@@ -184,8 +191,8 @@ edited_tasks_df = st.data_editor(
     key="tasks_editor"
 )
 
-# Recompute the progress column after any edits.
-edited_tasks_df["Progress"] = edited_tasks_df.apply(compute_progress, axis=1)
+# Recompute the progress column after any edits using the selected current_date.
+edited_tasks_df["Progress"] = edited_tasks_df.apply(lambda row: compute_progress(row, current_date), axis=1)
 
 if st.button("Save Task Changes"):
     save_tasks(edited_tasks_df)
@@ -235,8 +242,8 @@ st.header("Expenses Over Last 30 Days")
 
 # Convert the "Date" column in edited_expenses_df to datetime for filtering.
 edited_expenses_df["Date"] = pd.to_datetime(edited_expenses_df["Date"], errors="coerce")
-today = pd.Timestamp.today().normalize()
-thirty_days_ago = today - pd.Timedelta(days=30)
+today_ts = pd.Timestamp(current_date)
+thirty_days_ago = today_ts - pd.Timedelta(days=30)
 filtered_expenses = edited_expenses_df[edited_expenses_df["Date"] >= thirty_days_ago]
 
 if not filtered_expenses.empty:
