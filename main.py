@@ -3,7 +3,6 @@ from auth import login_popup  # Import authentication function
 
 st.set_page_config(initial_sidebar_state="collapsed", layout="wide")
 
-PASSWORD = st.secrets["PASSWORD"]
 # Define a CSS snippet to hide Streamlit's default menu, footer, and header
 hide_st_style = """
 <style>
@@ -25,7 +24,7 @@ if "authenticated" not in st.session_state:
 
 def login_popup():
     """Displays a password prompt before showing the UI globally across all pages."""
-    correct_password = PASSWORD
+    correct_password = "Betega50?"
 
     if not st.session_state["authenticated"]:
         st.title("🔒 Secure Login")
