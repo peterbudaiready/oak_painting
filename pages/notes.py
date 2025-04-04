@@ -103,6 +103,15 @@ init_db()
 tasks_df = load_tasks()
 expenses_df = load_expenses()
 
+# Convert date columns in tasks (if data exists) to proper date objects.
+if not tasks_df.empty:
+    tasks_df["Date_Created"] = pd.to_datetime(tasks_df["Date_Created"], errors="coerce").dt.date
+    tasks_df["Deadline"] = pd.to_datetime(tasks_df["Deadline"], errors="coerce").dt.date
+
+# Convert the date column in expenses to proper date objects.
+if not expenses_df.empty:
+    expenses_df["Date"] = pd.to_datetime(expenses_df["Date"], errors="coerce").dt.date
+
 # --- Tasks Section ---
 
 # If no tasks exist, initialize with one row having default values.
@@ -202,18 +211,18 @@ st.markdown("---")
 
 st.header("Expenses Over Last 30 Days")
 
-# Filter expenses for the last 30 days.
+# Convert the "Date" column in edited_expenses_df to datetime for filtering.
+edited_expenses_df["Date"] = pd.to_datetime(edited_expenses_df["Date"], errors="coerce")
 today = pd.Timestamp.today().normalize()
 thirty_days_ago = today - pd.Timedelta(days=30)
-
-# Ensure the Date column is a datetime type.
-edited_expenses_df["Date"] = pd.to_datetime(edited_expenses_df["Date"], errors="coerce")
 filtered_expenses = edited_expenses_df[edited_expenses_df["Date"] >= thirty_days_ago]
 
 if not filtered_expenses.empty:
-    chart_data = (filtered_expenses
-                  .sort_values("Date")
-                  .set_index("Date")["Price"])
+    chart_data = (
+        filtered_expenses
+        .sort_values("Date")
+        .set_index("Date")["Price"]
+    )
     st.line_chart(chart_data)
 else:
     st.info("No expenses data in the last 30 days to display in the chart.")
