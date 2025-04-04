@@ -9,11 +9,9 @@ import datetime
 DATABASE_URL = st.secrets["DATABASE_URL"]
 
 def get_connection():
-    """Establishes a connection to the Supabase database."""
     return psycopg2.connect(DATABASE_URL)
 
 def upload_file_to_supabase(file, note):
-    """Uploads a file along with an optional note to the Supabase database."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -35,7 +33,6 @@ def upload_file_to_supabase(file, note):
         return False, f"❌ Upload error: {e}"
 
 def fetch_documents():
-    """Retrieves all documents' metadata from the database."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -49,7 +46,6 @@ def fetch_documents():
         return []
 
 def delete_document(doc_id):
-    """Deletes a document from the database by its ID."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -63,13 +59,10 @@ def delete_document(doc_id):
         return False
 
 def get_download_link(filedata, filename, filetype):
-    """Generates a download link for a file."""
     b64 = base64.b64encode(filedata).decode()
-    href = f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
-    return href
+    return f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
 
 def binary_to_image_data(filedata, filetype):
-    """Converts binary data to a base64-encoded image string if the file is an image."""
     if filetype.startswith("image/"):
         b64 = base64.b64encode(filedata).decode()
         return f"data:{filetype};base64,{b64}"
@@ -79,11 +72,10 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
-# Upload Button
+# Upload Button & Dialog
 if st.button("Upload Document"):
     st.session_state.show_upload_dialog = True
 
-# Upload Dialog
 if st.session_state.get("show_upload_dialog", False):
     @st.experimental_dialog("Upload New Document")
     def upload_dialog():
@@ -106,11 +98,13 @@ if st.session_state.get("show_upload_dialog", False):
 
     upload_dialog()
 
-# Load and display documents
+# Fetch documents
+documents = fetch_documents()
+
+# Show documents
 st.markdown("---")
 st.markdown("### 📑 Uploaded Documents")
 
-documents = fetch_documents()
 if documents:
     records = []
     doc_id_map = {}
@@ -118,9 +112,8 @@ if documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
         image_preview = binary_to_image_data(filedata, filetype)
         download_html = get_download_link(filedata, filename, filetype)
-        file_label = f"{filename} ({uploaded_at.strftime('%Y-%m-%d')})"
-        doc_id_map[file_label] = doc_id
-
+        label = f"{filename} ({uploaded_at.strftime('%Y-%m-%d')})"
+        doc_id_map[label] = doc_id
         records.append({
             "Preview": image_preview,
             "Filename": filename,
@@ -135,7 +128,7 @@ if documents:
     st.data_editor(
         df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
         column_config={
-            "Preview": st.column_config.ImageColumn("Preview", width="small", help="Image preview (if supported)"),
+            "Preview": st.column_config.ImageColumn("Preview", width="small"),
             "Download": st.column_config.LinkColumn("Download"),
         },
         hide_index=True,
@@ -143,15 +136,25 @@ if documents:
         disabled=True
     )
 
-    st.markdown("---")
-    st.markdown("### 🗑️ Delete a Document")
-    selected_file = st.selectbox("Select a document to delete", list(doc_id_map.keys()))
-    if st.button("Delete Selected Document"):
-        deleted = delete_document(doc_id_map[selected_file])
-        if deleted:
-            st.success(f"Deleted '{selected_file}'")
-            st.rerun()
-        else:
-            st.error("Delete failed.")
+    # Delete Button & Dialog
+    if st.button("Delete Document"):
+        st.session_state.show_delete_dialog = True
+
+    if st.session_state.get("show_delete_dialog", False):
+        @st.experimental_dialog("Delete Document")
+        def delete_dialog():
+            selected_label = st.selectbox("Select a document to delete", list(doc_id_map.keys()))
+            if st.button("Delete"):
+                deleted = delete_document(doc_id_map[selected_label])
+                if deleted:
+                    st.success(f"Deleted '{selected_label}'")
+                    st.session_state.show_delete_dialog = False
+                    st.rerun()
+                else:
+                    st.error("Delete failed.")
+            if st.button("Cancel"):
+                st.session_state.show_delete_dialog = False
+                st.rerun()
+        delete_dialog()
 else:
     st.info("No documents uploaded yet.")
