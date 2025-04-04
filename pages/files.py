@@ -79,11 +79,11 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
-# Button to trigger the upload dialog
+# Upload Button
 if st.button("Upload Document"):
     st.session_state.show_upload_dialog = True
 
-# Upload dialog
+# Upload Dialog
 if st.session_state.get("show_upload_dialog", False):
     @st.experimental_dialog("Upload New Document")
     def upload_dialog():
@@ -106,17 +106,21 @@ if st.session_state.get("show_upload_dialog", False):
 
     upload_dialog()
 
+# Load and display documents
 st.markdown("---")
 st.markdown("### 📑 Uploaded Documents")
 
-# Load and prepare data
 documents = fetch_documents()
 if documents:
     records = []
+    doc_id_map = {}
     for row in documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
         image_preview = binary_to_image_data(filedata, filetype)
         download_html = get_download_link(filedata, filename, filetype)
+        file_label = f"{filename} ({uploaded_at.strftime('%Y-%m-%d')})"
+        doc_id_map[file_label] = doc_id
+
         records.append({
             "Preview": image_preview,
             "Filename": filename,
@@ -124,15 +128,12 @@ if documents:
             "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
             "Note": note,
             "Download": download_html,
-            "Delete": f"🗑️ Delete {doc_id}",
-            "id": doc_id
         })
 
     df = pd.DataFrame(records)
 
-    # Display in editable table style (non-editable)
-    edited_df = st.data_editor(
-        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download", "Delete"]],
+    st.data_editor(
+        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
         column_config={
             "Preview": st.column_config.ImageColumn("Preview", width="small", help="Image preview (if supported)"),
             "Download": st.column_config.LinkColumn("Download"),
@@ -142,13 +143,15 @@ if documents:
         disabled=True
     )
 
-    # Handle delete action
-    for index, row in edited_df.iterrows():
-        delete_button_key = f"delete_{row['id']}"
-        if st.button("Delete", key=delete_button_key):
-            deleted = delete_document(row["id"])
-            if deleted:
-                st.success(f"Deleted {row['Filename']}")
-                st.rerun()
+    st.markdown("---")
+    st.markdown("### 🗑️ Delete a Document")
+    selected_file = st.selectbox("Select a document to delete", list(doc_id_map.keys()))
+    if st.button("Delete Selected Document"):
+        deleted = delete_document(doc_id_map[selected_file])
+        if deleted:
+            st.success(f"Deleted '{selected_file}'")
+            st.rerun()
+        else:
+            st.error("Delete failed.")
 else:
     st.info("No documents uploaded yet.")
