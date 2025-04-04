@@ -72,6 +72,41 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
+# --- Documents Table ---
+st.markdown("---")
+st.markdown("### 📑 Uploaded Documents")
+
+documents = fetch_documents()
+if documents:
+    records = []
+    for row in documents:
+        doc_id, filename, filetype, uploaded_at, note, filedata = row
+        image_preview = binary_to_image_data(filedata, filetype)
+        download_html = get_download_link(filedata, filename, filetype)
+        records.append({
+            "Preview": image_preview,
+            "Filename": filename,
+            "Type": filetype,
+            "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
+            "Note": note,
+            "Download": download_html,
+        })
+
+    df = pd.DataFrame(records)
+
+    st.data_editor(
+        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
+        column_config={
+            "Preview": st.column_config.ImageColumn("Preview", width="small"),
+            "Download": st.column_config.LinkColumn("Download"),
+        },
+        hide_index=True,
+        use_container_width=True,
+        disabled=True
+    )
+else:
+    st.info("No documents uploaded yet.")
+
 # --- Button triggers ---
 if st.button("Upload Document"):
     st.session_state.show_upload_dialog = True
@@ -131,38 +166,3 @@ if st.session_state.get("show_upload_dialog", False):
 
 if st.session_state.get("show_delete_dialog", False):
     delete_dialog()
-
-# --- Documents Table ---
-st.markdown("---")
-st.markdown("### 📑 Uploaded Documents")
-
-documents = fetch_documents()
-if documents:
-    records = []
-    for row in documents:
-        doc_id, filename, filetype, uploaded_at, note, filedata = row
-        image_preview = binary_to_image_data(filedata, filetype)
-        download_html = get_download_link(filedata, filename, filetype)
-        records.append({
-            "Preview": image_preview,
-            "Filename": filename,
-            "Type": filetype,
-            "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
-            "Note": note,
-            "Download": download_html,
-        })
-
-    df = pd.DataFrame(records)
-
-    st.data_editor(
-        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
-        column_config={
-            "Preview": st.column_config.ImageColumn("Preview", width="small"),
-            "Download": st.column_config.LinkColumn("Download"),
-        },
-        hide_index=True,
-        use_container_width=True,
-        disabled=True
-    )
-else:
-    st.info("No documents uploaded yet.")
