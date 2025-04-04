@@ -4,13 +4,13 @@ import sqlite3
 import os
 import datetime
 
-# Database file and table names
+# Database file and table names.
 DB_FILE = "data.db"
 TASKS_TABLE = "tasks"
 EXPENSES_TABLE = "expenses"
 
 def init_db():
-    """Initialize the SQLite database with tasks and expenses tables if not exists."""
+    """Initialize the SQLite database with tasks and expenses tables if they do not exist."""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     # Create tasks table with expected columns.
@@ -66,14 +66,14 @@ def load_expenses():
         return pd.DataFrame(columns=["Name", "Web", "Date", "Type", "Price"])
 
 def save_tasks(df):
-    """Save tasks DataFrame to the database."""
+    """Save the tasks DataFrame to the database."""
     conn = sqlite3.connect(DB_FILE)
     df.to_sql(TASKS_TABLE, conn, if_exists="replace", index=False)
     conn.commit()
     conn.close()
 
 def save_expenses(df):
-    """Save expenses DataFrame to the database."""
+    """Save the expenses DataFrame to the database."""
     conn = sqlite3.connect(DB_FILE)
     df.to_sql(EXPENSES_TABLE, conn, if_exists="replace", index=False)
     conn.commit()
@@ -81,10 +81,11 @@ def save_expenses(df):
 
 def compute_progress(row, current_date):
     """
-    Compute progress as a percentage based on Date_Created, Deadline and Current Date.
-    - If current_date <= Date_Created: returns 0%
-    - If current_date >= Deadline: returns 100%
-    - Otherwise, returns the percentage of time elapsed between Date_Created and Deadline.
+    Compute progress as a percentage based on the task's creation date, deadline,
+    and the current system date.
+    - Returns 0% if current_date is on or before the creation date.
+    - Returns 100% if current_date is on or after the deadline.
+    - Otherwise, computes the elapsed percentage between the two dates.
     """
     try:
         date_created = pd.to_datetime(row["Date_Created"])
@@ -98,12 +99,11 @@ def compute_progress(row, current_date):
             return 100
         else:
             progress = ((current_date - date_created) / (deadline - date_created)) * 100
-            progress = max(0, min(100, progress))
-            return round(progress)
+            return round(max(0, min(100, progress)))
     except Exception:
         return 0
 
-# Initialize database and load existing data.
+# Initialize the database and load existing data.
 init_db()
 tasks_df = load_tasks()
 expenses_df = load_expenses()
@@ -114,7 +114,7 @@ expected_task_columns = {
     "Web": "",
     "Done": False,
     "Priority": "Low",
-    "Date_Created": pd.Timestamp.today().date(),
+    "Date_Created": pd.Timestamp.today().date(),  # Automatically set on creation.
     "Deadline": (pd.Timestamp.today().date() + datetime.timedelta(days=7)),
     "Progress": 0
 }
@@ -142,12 +142,13 @@ tasks_df["Deadline"] = pd.to_datetime(tasks_df["Deadline"], errors="coerce").dt.
 expenses_df["Date"] = pd.to_datetime(expenses_df["Date"], errors="coerce").dt.date
 
 # --- Tasks Section ---
-# Allow setting a current date for progress calculation (default to today).
-current_date = st.date_input("Set Current Date for Progress Calculation", value=pd.Timestamp.today().date())
 
-# If tasks_df is empty, initialize with one row having default values.
+# Use system current date.
+system_current_date = pd.Timestamp.today().date()
+
+# If tasks_df is empty, initialize it with one default row.
 if tasks_df.empty:
-    today_date = pd.Timestamp.today().date()
+    today_date = system_current_date
     default_deadline = today_date + datetime.timedelta(days=7)
     tasks_df = pd.DataFrame({
         "Note": [""],
@@ -159,40 +160,49 @@ if tasks_df.empty:
         "Progress": [0]
     })
 
-# Recompute progress for each task using the provided current_date.
-tasks_df["Progress"] = tasks_df.apply(lambda row: compute_progress(row, current_date), axis=1)
+# For any rows missing a creation date, set it to the system current date.
+tasks_df["Date_Created"] = tasks_df["Date_Created"].apply(lambda d: d if pd.notnull(d) else system_current_date)
+
+# Compute progress for each task using the system current date.
+tasks_df["Progress"] = tasks_df.apply(lambda row: compute_progress(row, system_current_date), axis=1)
 
 # Title for the tasks section.
 st.title("Task Manager")
 
 # Configure columns for the tasks editor.
+# The "Date_Created" field is hidden from the user.
 tasks_column_config = {
     "Note": "Note",
     "Web": st.column_config.LinkColumn("Web", help="Enter a valid URL"),
     "Done": "Done",
     "Priority": st.column_config.SelectboxColumn("Priority", options=["Low", "Mid", "High"]),
-    "Date_Created": st.column_config.DateColumn("Date Created", help="Task creation date"),
     "Deadline": st.column_config.DateColumn("Deadline", help="Task deadline"),
     "Progress": st.column_config.ProgressColumn(
         "Progress",
-        help="Progress from creation to deadline based on current date",
+        help="Progress from creation to deadline (calculated automatically)",
         min_value=0,
         max_value=100,
         format="plain"
     ),
 }
+# Specify column order to hide "Date_Created".
+tasks_column_order = ["Note", "Web", "Done", "Priority", "Deadline", "Progress"]
 
 # Display the tasks data editor (allowing dynamic row additions).
 edited_tasks_df = st.data_editor(
     tasks_df,
     column_config=tasks_column_config,
+    column_order=tasks_column_order,
     num_rows="dynamic",
     use_container_width=True,
     key="tasks_editor"
 )
 
-# Recompute the progress column after any edits using the selected current_date.
-edited_tasks_df["Progress"] = edited_tasks_df.apply(lambda row: compute_progress(row, current_date), axis=1)
+# For any new rows missing a creation date, fill in with the current system date.
+edited_tasks_df["Date_Created"] = edited_tasks_df["Date_Created"].apply(lambda d: d if pd.notnull(d) else system_current_date)
+
+# Recompute the progress column after any edits using the system current date.
+edited_tasks_df["Progress"] = edited_tasks_df.apply(lambda row: compute_progress(row, system_current_date), axis=1)
 
 if st.button("Save Task Changes"):
     save_tasks(edited_tasks_df)
@@ -203,12 +213,12 @@ st.markdown("---")
 # --- Expenses Section ---
 st.header("Expenses")
 
-# If expenses_df is empty, initialize with one blank row.
+# If expenses_df is empty, initialize it with one blank row.
 if expenses_df.empty:
     expenses_df = pd.DataFrame({
         "Name": [""],
         "Web": [""],
-        "Date": [pd.Timestamp.today().date()],
+        "Date": [system_current_date],
         "Type": ["one"],
         "Price": [0]
     })
@@ -240,10 +250,10 @@ st.markdown("---")
 # --- Expenses Chart (Last 30 Days) ---
 st.header("Expenses Over Last 30 Days")
 
-# Convert the "Date" column in edited_expenses_df to datetime for filtering.
+# Convert the "Date" column in the edited expenses DataFrame to datetime for filtering.
 edited_expenses_df["Date"] = pd.to_datetime(edited_expenses_df["Date"], errors="coerce")
-today_ts = pd.Timestamp(current_date)
-thirty_days_ago = today_ts - pd.Timedelta(days=30)
+system_current_ts = pd.Timestamp(system_current_date)
+thirty_days_ago = system_current_ts - pd.Timedelta(days=30)
 filtered_expenses = edited_expenses_df[edited_expenses_df["Date"] >= thirty_days_ago]
 
 if not filtered_expenses.empty:
