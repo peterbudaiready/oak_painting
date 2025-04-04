@@ -4,16 +4,16 @@ from psycopg2 import Binary
 import pandas as pd
 import base64
 import datetime
-from io import BytesIO
 
-# Use Streamlit Secrets (Cloud or local)
+# Use Streamlit Secrets for database connection
 DATABASE_URL = st.secrets["DATABASE_URL"]
 
 def get_connection():
+    """Establishes a connection to the Supabase database."""
     return psycopg2.connect(DATABASE_URL)
 
-# Upload document into Supabase
 def upload_file_to_supabase(file, note):
+    """Uploads a file along with an optional note to the Supabase database."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -34,8 +34,8 @@ def upload_file_to_supabase(file, note):
     except Exception as e:
         return False, f"❌ Upload error: {e}"
 
-# Fetch documents metadata
 def fetch_documents():
+    """Retrieves all documents' metadata from the database."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -48,8 +48,8 @@ def fetch_documents():
         st.error(f"Error fetching documents: {e}")
         return []
 
-# Delete a document
 def delete_document(doc_id):
+    """Deletes a document from the database by its ID."""
     try:
         conn = get_connection()
         cur = conn.cursor()
@@ -62,14 +62,14 @@ def delete_document(doc_id):
         st.error(f"Delete error: {e}")
         return False
 
-# Download link
 def get_download_link(filedata, filename, filetype):
+    """Generates a download link for a file."""
     b64 = base64.b64encode(filedata).decode()
     href = f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
     return href
 
-# Convert binary to base64 image
 def binary_to_image_data(filedata, filetype):
+    """Converts binary data to a base64-encoded image string if the file is an image."""
     if filetype.startswith("image/"):
         b64 = base64.b64encode(filedata).decode()
         return f"data:{filetype};base64,{b64}"
@@ -79,18 +79,32 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
-st.markdown("### Upload New Document")
-uploaded_file = st.file_uploader("Choose a file")
-note_text = st.text_input("Note (optional)")
-if st.button("Upload File"):
-    if uploaded_file:
-        success, msg = upload_file_to_supabase(uploaded_file, note_text)
-        if success:
-            st.success(msg)
-        else:
-            st.error(msg)
-    else:
-        st.warning("Please select a file.")
+# Button to trigger the upload dialog
+if st.button("Upload Document"):
+    st.session_state.show_upload_dialog = True
+
+# Upload dialog
+if st.session_state.get("show_upload_dialog", False):
+    @st.experimental_dialog("Upload New Document")
+    def upload_dialog():
+        uploaded_file = st.file_uploader("Choose a file")
+        note_text = st.text_input("Note (optional)")
+        if st.button("Upload"):
+            if uploaded_file:
+                success, msg = upload_file_to_supabase(uploaded_file, note_text)
+                if success:
+                    st.success(msg)
+                    st.session_state.show_upload_dialog = False
+                    st.rerun()
+                else:
+                    st.error(msg)
+            else:
+                st.warning("Please select a file.")
+        if st.button("Cancel"):
+            st.session_state.show_upload_dialog = False
+            st.rerun()
+
+    upload_dialog()
 
 st.markdown("---")
 st.markdown("### 📑 Uploaded Documents")
@@ -117,7 +131,7 @@ if documents:
     df = pd.DataFrame(records)
 
     # Display in editable table style (non-editable)
-    st.data_editor(
+    edited_df = st.data_editor(
         df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download", "Delete"]],
         column_config={
             "Preview": st.column_config.ImageColumn("Preview", width="small", help="Image preview (if supported)"),
@@ -129,11 +143,12 @@ if documents:
     )
 
     # Handle delete action
-    for r in records:
-        if st.button(r["Delete"]):
-            deleted = delete_document(r["id"])
+    for index, row in edited_df.iterrows():
+        delete_button_key = f"delete_{row['id']}"
+        if st.button("Delete", key=delete_button_key):
+            deleted = delete_document(row["id"])
             if deleted:
-                st.success(f"Deleted {r['Filename']}")
-                st.experimental_rerun()
+                st.success(f"Deleted {row['Filename']}")
+                st.rerun()
 else:
     st.info("No documents uploaded yet.")
