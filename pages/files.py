@@ -51,9 +51,9 @@ def binary_to_image_data(filedata, filetype):
         return f"data:{filetype};base64,{b64}"
     return ""
 
-def generate_download_link(filedata, filename, filetype):
+def generate_download_url(filedata, filename, filetype):
     b64 = base64.b64encode(filedata).decode()
-    return f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
+    return f"data:{filetype};base64,{b64}"
 
 # ---------------- UI ----------------
 
@@ -69,14 +69,14 @@ if documents:
     for row in documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
         image_preview = binary_to_image_data(filedata, filetype)
-        download_link = generate_download_link(filedata, filename, filetype)
+        download_url = generate_download_url(filedata, filename, filetype)
         records.append({
             "Preview": image_preview,
             "Filename": filename,
             "Type": filetype,
             "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
             "Note": note,
-            "Download": download_link
+            "Download": download_url  # Just the plain URL
         })
 
     df = pd.DataFrame(records)
@@ -85,7 +85,6 @@ if documents:
         df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
         column_config={
             "Preview": st.column_config.ImageColumn("Preview", width="small"),
-            "Download": st.column_config.LinkColumn("Download")
         },
         hide_index=True,
         use_container_width=True,
