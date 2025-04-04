@@ -11,7 +11,7 @@ header {visibility: hidden;}        /* Hide the header */
 
 def login_popup():
     """Ensures authentication is checked globally across all pages."""
-    correct_password = "Aaabacadae1"
+    correct_password = "Betega50?"
 
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
@@ -19,7 +19,7 @@ def login_popup():
     if not st.session_state["authenticated"]:
         st.title("🔒 Secure Login")
         with st.form("login_form"):
-            password = st.text_input("Betega50?", type="password")
+            password = st.text_input("password", type="password")
             submit = st.form_submit_button("Login")
 
             if submit:
