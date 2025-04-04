@@ -10,7 +10,7 @@ import pandas as pd
 load_dotenv()
 
 # Option 1: Use DATABASE_URL if provided
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL=postgresql://postgres.pckftxhpmfebxlnfhepq:Aaabacadae1.@aws-0-us-east-1.pooler.supabase.com:5432/postgres
 
 def get_connection():
     """Create and return a new database connection."""
