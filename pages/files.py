@@ -6,7 +6,7 @@ import os
 import datetime
 import pandas as pd
 
-DATABASE_URL = f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
+DATABASE_URL=postgresql://postgres:Aaabacadae1.@db.pckftxhpmfebxlnfhepq.supabase.co:5432/postgres
 
 def get_connection():
     """Create and return a new database connection."""
