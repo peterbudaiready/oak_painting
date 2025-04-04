@@ -1,7 +1,6 @@
 import streamlit as st
 import psycopg2
 from psycopg2 import sql
-from psycopg2.extensions import AsIs
 from dotenv import load_dotenv
 import os
 import datetime
@@ -10,24 +9,24 @@ import pandas as pd
 # Load environment variables from .env
 load_dotenv()
 
-# Fetch connection variables
-USER = os.getenv("user")
-PASSWORD = os.getenv("password")
-HOST = os.getenv("host")
-PORT = os.getenv("port")
-DBNAME = os.getenv("dbname")
+# Option 1: Use DATABASE_URL if provided
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
     """Create and return a new database connection."""
     try:
-        connection = psycopg2.connect(
-            user=USER,
-            password=PASSWORD,
-            host=HOST,
-            port=PORT,
-            dbname=DBNAME
-        )
-        return connection
+        if DATABASE_URL:
+            conn = psycopg2.connect(DATABASE_URL)
+        else:
+            # Option 2: Use individual connection variables
+            conn = psycopg2.connect(
+                user=os.getenv("user"),
+                password=os.getenv("password"),
+                host=os.getenv("host"),
+                port=os.getenv("port"),
+                dbname=os.getenv("dbname")
+            )
+        return conn
     except Exception as e:
         st.error("Failed to connect to the database.")
         st.error(e)
@@ -36,9 +35,8 @@ def get_connection():
 st.title("Document Manager")
 
 st.markdown("### Upload a Document")
-# File uploader widget: adjust allowed types as needed.
 uploaded_file = st.file_uploader("Choose a document to upload", type=[
-    "pdf", "docx", "txt", "png", "jpg", "jpeg", "gif", "csv", "xlsx", "zip", "mp3", "mp4"
+    "pdf", "docx", "txt", "png", "jpg", "jpeg", "gif", "csv", "xlsx", "zip", "mp3", "mp4", "mpeg4"
 ])
 note_text = st.text_input("Enter a note for this document (optional)")
 
@@ -109,7 +107,6 @@ else:
 st.markdown("---")
 st.markdown("### Delete a Document")
 
-# Fetch documents for deletion options.
 def fetch_document_options():
     conn = get_connection()
     options = {}
@@ -119,7 +116,6 @@ def fetch_document_options():
             cursor.execute("SELECT id, filename FROM documents ORDER BY uploaded_at DESC")
             rows = cursor.fetchall()
             for row in rows:
-                # Create a label like "123 - myfile.pdf" mapping to id 123.
                 options[f"{row[0]} - {row[1]}"] = row[0]
         except Exception as e:
             st.error("Error fetching documents for deletion:")
