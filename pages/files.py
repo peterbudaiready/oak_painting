@@ -5,11 +5,7 @@ from dotenv import load_dotenv
 import os
 import datetime
 
-# Load environment variables from .env
-load_dotenv()
-
-# Retrieve the connection string from the environment
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = st.secrets["DATABASE_URL"]
 
 if not DATABASE_URL:
     st.error("DATABASE_URL not found in environment.")
