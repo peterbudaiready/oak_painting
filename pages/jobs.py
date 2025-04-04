@@ -8,8 +8,8 @@ from datetime import datetime
 # ======================================================================
 SUPABASE_URL = "https://pckftxhpmfebxlnfhepq.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBja2Z0eGhwbWZlYnhsbmZoZXBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNjQxNjMsImV4cCI6MjA1ODk0MDE2M30.5QhW4hOEpDg1CVHZuC_4-pgQ8LiX4f2EFFBq1R2gBJA"
-# For a direct connection (replace [YOUR-PASSWORD] with your actual password)
-DATABASE_URL = "postgresql://postgres:[YOUR-PASSWORD]@db.pckftxhpmfebxlnfhepq.supabase.co:5432/postgres"
+# Updated connection string with actual password and SSL mode requirement
+DATABASE_URL = "postgresql://postgres:Aaabacadae1.@db.pckftxhpmfebxlnfhepq.supabase.co:5432/postgres?sslmode=require"
 
 # ====================================================
 # Database helper functions
