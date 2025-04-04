@@ -5,12 +5,34 @@ import pandas as pd
 import base64
 import datetime
 
-# Database connection using Streamlit Secrets
+# Use Streamlit Secrets for database connection
 DATABASE_URL = st.secrets["DATABASE_URL"]
 
 def get_connection():
     """Establishes a connection to the Supabase database."""
     return psycopg2.connect(DATABASE_URL)
+
+def upload_file_to_supabase(file, note):
+    """Uploads a file along with an optional note to the Supabase database."""
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        query = """
+            INSERT INTO documents (filename, filetype, filedata, uploaded_at, note)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        filename = file.name
+        filetype = file.type
+        filedata = file.read()
+        uploaded_at = datetime.datetime.now()
+
+        cur.execute(query, (filename, filetype, Binary(filedata), uploaded_at, note))
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True, "✅ File uploaded successfully!"
+    except Exception as e:
+        return False, f"❌ Upload error: {e}"
 
 def fetch_documents():
     """Retrieves all documents' metadata from the database."""
@@ -57,6 +79,33 @@ def binary_to_image_data(filedata, filetype):
 
 st.title("📁 Document Manager (Supabase)")
 
+# Button to trigger the upload dialog
+if st.button("Upload Document"):
+    st.session_state.show_upload_dialog = True
+
+# Upload dialog
+if st.session_state.get("show_upload_dialog", False):
+    @st.experimental_dialog("Upload New Document")
+    def upload_dialog():
+        uploaded_file = st.file_uploader("Choose a file")
+        note_text = st.text_input("Note (optional)")
+        if st.button("Upload"):
+            if uploaded_file:
+                success, msg = upload_file_to_supabase(uploaded_file, note_text)
+                if success:
+                    st.success(msg)
+                    st.session_state.show_upload_dialog = False
+                    st.rerun()
+                else:
+                    st.error(msg)
+            else:
+                st.warning("Please select a file.")
+        if st.button("Cancel"):
+            st.session_state.show_upload_dialog = False
+            st.rerun()
+
+    upload_dialog()
+
 st.markdown("---")
 st.markdown("### 📑 Uploaded Documents")
 
@@ -69,20 +118,21 @@ if documents:
         image_preview = binary_to_image_data(filedata, filetype)
         download_html = get_download_link(filedata, filename, filetype)
         records.append({
-            "ID": doc_id,
             "Preview": image_preview,
             "Filename": filename,
             "Type": filetype,
             "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
             "Note": note,
-            "Download": download_html
+            "Download": download_html,
+            "Delete": f"🗑️ Delete {doc_id}",
+            "id": doc_id
         })
 
     df = pd.DataFrame(records)
 
     # Display in editable table style (non-editable)
     edited_df = st.data_editor(
-        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
+        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download", "Delete"]],
         column_config={
             "Preview": st.column_config.ImageColumn("Preview", width="small", help="Image preview (if supported)"),
             "Download": st.column_config.LinkColumn("Download"),
@@ -92,12 +142,13 @@ if documents:
         disabled=True
     )
 
-    # Iterate over DataFrame rows to create delete buttons
-    for index, row in df.iterrows():
-        delete_button_key = f"delete_{row['ID']}"
-        if st.button(f"Delete {row['Filename']}", key=delete_button_key):
-            if delete_document(row["ID"]):
+    # Handle delete action
+    for index, row in edited_df.iterrows():
+        delete_button_key = f"delete_{row['id']}"
+        if st.button("Delete", key=delete_button_key):
+            deleted = delete_document(row["id"])
+            if deleted:
                 st.success(f"Deleted {row['Filename']}")
-                st.experimental_rerun()
+                st.rerun()
 else:
     st.info("No documents uploaded yet.")
