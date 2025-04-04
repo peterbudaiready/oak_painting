@@ -19,7 +19,7 @@ def login_popup():
     if not st.session_state["authenticated"]:
         st.title("🔒 Secure Login")
         with st.form("login_form"):
-            password = st.text_input("Enter Password", type="password")
+            password = st.text_input("Betega50?", type="password")
             submit = st.form_submit_button("Login")
 
             if submit:
