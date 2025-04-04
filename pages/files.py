@@ -6,9 +6,7 @@ import os
 import datetime
 import pandas as pd
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = f"postgresql://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}"
 
 def get_connection():
     """Create and return a new database connection."""
