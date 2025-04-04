@@ -1,0 +1,16 @@
+[theme]
+base="dark"
+primaryColor="#4bff9f"
+backgroundColor="#000000"
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
+[client]
+toolbarMode = "minimal"
+
+[ui]
+# Enables wide mode
+layout = "wide"
