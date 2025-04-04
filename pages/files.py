@@ -80,7 +80,7 @@ if st.button("Delete Document"):
     st.session_state.show_delete_dialog = True
 
 # --- Upload Dialog ---
-@st.experimental_dialog("Upload New Document")
+@st.dialog("Upload New Document")
 def upload_dialog():
     uploaded_file = st.file_uploader("Choose a file")
     note_text = st.text_input("Note (optional)")
@@ -100,7 +100,7 @@ def upload_dialog():
         st.rerun()
 
 # --- Delete Dialog ---
-@st.experimental_dialog("Delete Document")
+@st.dialog("Delete Document")
 def delete_dialog():
     documents = fetch_documents()
     if not documents:
