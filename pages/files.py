@@ -58,10 +58,6 @@ def delete_document(doc_id):
         st.error(f"Delete error: {e}")
         return False
 
-def get_download_link(filedata, filename, filetype):
-    b64 = base64.b64encode(filedata).decode()
-    return f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
-
 def binary_to_image_data(filedata, filetype):
     if filetype.startswith("image/"):
         b64 = base64.b64encode(filedata).decode()
@@ -82,28 +78,32 @@ if documents:
     for row in documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
         image_preview = binary_to_image_data(filedata, filetype)
-        download_html = get_download_link(filedata, filename, filetype)
         records.append({
             "Preview": image_preview,
             "Filename": filename,
             "Type": filetype,
             "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
             "Note": note,
-            "Download": download_html,
         })
 
     df = pd.DataFrame(records)
 
     st.data_editor(
-        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
+        df[["Preview", "Filename", "Type", "Uploaded", "Note"]],
         column_config={
             "Preview": st.column_config.ImageColumn("Preview", width="small"),
-            "Download": st.column_config.LinkColumn("Download"),
         },
         hide_index=True,
         use_container_width=True,
         disabled=True
     )
+
+    st.markdown("### 📥 Download Links")
+    for row in documents:
+        doc_id, filename, filetype, uploaded_at, note, filedata = row
+        b64 = base64.b64encode(filedata).decode()
+        href = f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download {filename}</a>'
+        st.markdown(href, unsafe_allow_html=True)
 else:
     st.info("No documents uploaded yet.")
 
