@@ -1,7 +1,6 @@
 import streamlit as st
 import psycopg2
 from psycopg2 import Binary
-import pandas as pd
 import base64
 import datetime
 
@@ -45,15 +44,9 @@ def fetch_documents():
         st.error(f"Error fetching documents: {e}")
         return []
 
-def binary_to_image_data(filedata, filetype):
-    if filetype.startswith("image/"):
-        b64 = base64.b64encode(filedata).decode()
-        return f"data:{filetype};base64,{b64}"
-    return ""
-
-def generate_download_url(filedata, filename, filetype):
+def generate_download_link(filedata, filename, filetype):
     b64 = base64.b64encode(filedata).decode()
-    return f"data:{filetype};base64,{b64}"
+    return f'<a href="data:{filetype};base64,{b64}" download="{filename}">📥 Download</a>'
 
 # ---------------- UI ----------------
 
@@ -65,35 +58,41 @@ st.markdown("### 📑 Uploaded Documents")
 
 documents = fetch_documents()
 if documents:
-    records = []
+    table_html = """
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align: left;">Filename</th>
+                <th style="text-align: left;">Type</th>
+                <th style="text-align: left;">Uploaded</th>
+                <th style="text-align: left;">Note</th>
+                <th style="text-align: left;">Download</th>
+            </tr>
+        </thead>
+        <tbody>
+    """
+
     for row in documents:
         doc_id, filename, filetype, uploaded_at, note, filedata = row
-        image_preview = binary_to_image_data(filedata, filetype)
-        download_url = generate_download_url(filedata, filename, filetype)
-        records.append({
-            "Preview": image_preview,
-            "Filename": filename,
-            "Type": filetype,
-            "Uploaded": uploaded_at.strftime("%Y-%m-%d %H:%M"),
-            "Note": note,
-            "Download": download_url  # Just the plain URL
-        })
+        download_link = generate_download_link(filedata, filename, filetype)
 
-    df = pd.DataFrame(records)
+        table_html += f"""
+        <tr>
+            <td>{filename}</td>
+            <td>{filetype}</td>
+            <td>{uploaded_at.strftime('%Y-%m-%d %H:%M')}</td>
+            <td>{note or ""}</td>
+            <td>{download_link}</td>
+        </tr>
+        """
 
-    st.data_editor(
-        df[["Preview", "Filename", "Type", "Uploaded", "Note", "Download"]],
-        column_config={
-            "Preview": st.column_config.ImageColumn("Preview", width="small"),
-        },
-        hide_index=True,
-        use_container_width=True,
-        disabled=True
-    )
+    table_html += "</tbody></table>"
+
+    st.markdown(table_html, unsafe_allow_html=True)
 else:
     st.info("No documents uploaded yet.")
 
-# --- Button trigger ---
+# --- Upload Button ---
 if st.button("Upload Document"):
     st.session_state.show_upload_dialog = True
 
