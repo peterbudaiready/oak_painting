@@ -12,6 +12,8 @@ header {visibility: hidden;}        /* Hide the header */
 </style>
 """
 
+login_popup()
+
 # Apply the custom styling globally
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
