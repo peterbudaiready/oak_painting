@@ -6,11 +6,9 @@ import os
 import datetime
 import pandas as pd
 
-# Load environment variables from .env
 load_dotenv()
 
-# Option 1: Use DATABASE_URL if provided
-DATABASE_URL=postgresql://postgres.pckftxhpmfebxlnfhepq:Aaabacadae1.@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_connection():
     """Create and return a new database connection."""
