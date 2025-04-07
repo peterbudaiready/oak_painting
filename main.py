@@ -31,7 +31,7 @@ with col1:
     st.link_button('WordPress Edit mode', "https://hpanel.hostinger.com/redirect/1ofakindpainting.com?l=wpAdmin&source=website_list&directory=&isManagedUser=0&domain=1ofakindpainting.com&subdomain=")
     st.link_button('Hostinger', "https://hpanel.hostinger.com")
     st.link_button('Semrush(Website/SEO Audit)', "https://www.semrush.com/projects/")
-
+    st.link_button('Email', "https://mail.hostinger.com/?_task=mail&_mbox=INBOX")
 # Add content to the second column
 with col2:
     st.header("Google")
